@@ -17,6 +17,11 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
     el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel));
   });
+
+  const hosted = document.getElementById("hosted");
+  if (hosted && hosted.dataset.platform) {
+    hosted.textContent = t("hosted", { platform: hosted.dataset.platform });
+  }
 }
 
 const langButtons = Array.from(document.querySelectorAll(".lang__btn"));

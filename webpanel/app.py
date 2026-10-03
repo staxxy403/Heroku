@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import html
 import os
+import re
 import secrets
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -30,9 +31,46 @@ HOSTED_MARKER = '<span id="hosted"></span>'
 
 
 def custom_platform() -> str | None:
-    """Return the platform from ``HEROKU_PLATFORM``, or ``None`` when unset."""
+    """Return the platform shown in the footer.
 
-    return (os.environ.get(PLATFORM_ENV) or "").strip() or None
+    Prefers the explicit ``HEROKU_PLATFORM`` override, then falls back to the
+    platform detected by the bot so the footer is never left empty.
+    """
+
+    value = (os.environ.get(PLATFORM_ENV) or "").strip()
+    if value:
+        return value
+
+    try:
+        from heroku.utils.platform import get_named_platform
+    except Exception:  # pragma: no cover - optional dependency
+        return None
+
+    return get_named_platform() or None
+
+
+#: Root-relative asset URLs (``href``/``src``) that get an mtime cache-buster.
+ASSET_RE = re.compile(r"/static/[^\"'\s?]+")
+
+
+def stamp_assets(markup: str) -> str:
+    """Append an mtime-based cache-buster to every ``/static`` asset URL.
+
+    The panel HTML is served with ``Cache-Control: no-store`` but the assets are
+    not, so a cached ``/static/js/*.js`` would otherwise be reused after an
+    update. The query string changes whenever the underlying file changes.
+    """
+
+    def replace(match: re.Match[str]) -> str:
+        url = match.group(0)
+        asset = STATIC_DIR / url[len("/static/") :]
+        try:
+            stamp = int(asset.stat().st_mtime)
+        except OSError:
+            return url
+        return f"{url}?v={stamp}"
+
+    return ASSET_RE.sub(replace, markup)
 
 
 class CredentialsPayload(BaseModel):
@@ -85,8 +123,15 @@ def create_app(manager: LoginManager, token: str) -> FastAPI:
 
     platform = custom_platform()
     host_attr = f' data-platform="{html.escape(platform)}"' if platform else ""
-    index_html = (STATIC_DIR / "index.html").read_text(encoding="utf-8").replace(
-        HOSTED_MARKER, f'<span id="hosted"{host_attr}></span>'
+    index_html = stamp_assets(
+        (STATIC_DIR / "index.html")
+        .read_text(encoding="utf-8")
+        .replace(HOSTED_MARKER, f'<span id="hosted"{host_attr}></span>')
+    )
+    denied_html = stamp_assets(
+        (STATIC_DIR / "denied.html")
+        .read_text(encoding="utf-8")
+        .replace(HOSTED_MARKER, f'<span id="hosted"{host_attr}></span>')
     )
 
     @app.exception_handler(AccessDenied)
@@ -96,7 +141,11 @@ def create_app(manager: LoginManager, token: str) -> FastAPI:
                 status_code=401,
                 content={"ok": False, "error": "unauthorized"},
             )
-        return FileResponse(STATIC_DIR / "denied.html", status_code=403)
+        return HTMLResponse(
+            denied_html,
+            status_code=403,
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.exception_handler(LoginError)
     async def _login_error_handler(_: Request, exc: LoginError) -> JSONResponse:
