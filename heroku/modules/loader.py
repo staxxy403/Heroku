@@ -114,6 +114,12 @@ class LoaderMod(loader.Module):
                 lambda: self.strings["show_banner_doc"],
                 validator=loader.validators.Boolean(),
             ),
+            loader.ConfigValue(
+                "hikka_only_modules",
+                "warn",
+                lambda: self.strings["hikka_only_doc"],
+                validator=loader.validators.Choice(["block", "warn", "allow"]),
+            ),
         )
 
     async def _async_init(self):
@@ -717,6 +723,21 @@ class LoaderMod(loader.Module):
             if isinstance(message, Message):
                 await utils.answer(message, self.strings["inline_init_failed"])
             return False
+
+        if re.search(r"# ?scope: ?hikka_only", doc):
+            mode = self.config["hikka_only_modules"]
+
+            if mode != "allow":
+                logger.warning(
+                    "Module %s is declared Hikka-only (hikka_only_modules=%s)",
+                    module_label,
+                    mode,
+                )
+
+            if mode == "block":
+                if isinstance(message, Message):
+                    await utils.answer(message, self.strings["hikka_only_blocked"])
+                return False
 
         if re.search(r"# ?scope: ?heroku_min", doc):
             ver = re.search(r"# ?scope: ?heroku_min ((?:\d+\.){2}\d+)", doc).group(1)

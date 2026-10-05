@@ -642,6 +642,8 @@ loader:
   inline_init_failed: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>This module requires Heroku inline feature and initialization of InlineManager failed</b>\n<i>Please, remove one of your old bots from @BotFather and restart userbot to load this module</i>"
   version_incompatible: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>This module requires Heroku {}+\nPlease, update with</b> <code>.update</code>"
   ffmpeg_required: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>This module requires FFMPEG, which is not installed</b>"
+  hikka_only_doc: "How to handle modules marked <code># scope: hikka_only</code> (built for Hikka, not Heroku):\n<b>block</b> — refuse to load\n<b>warn</b> — load, but log a warning\n<b>allow</b> — load silently"
+  hikka_only_blocked: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>This module is built for Hikka only and is not supported on Heroku</b>"
   developer: "\n\n<tg-emoji emoji-id=5287454910059654880>🫶</tg-emoji> <b>Developer:</b> {}"
   depends_from: "\n\n<tg-emoji emoji-id=5341492148468465410>📦</tg-emoji> <b>Dependencies:</b> \n{}"
   by: "by"

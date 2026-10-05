@@ -610,6 +610,8 @@ loader:
   ihandler: "\n<tg-emoji emoji-id=5372981976804366741>🤖</tg-emoji> <code>{}</code> {}"
   version_incompatible: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Этому модулю требуется Heroku версии {}+\nОбновись с помощью</b> <code>.update</code>"
   ffmpeg_required: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Этому модулю требуется FFMPEG, который не установлен</b>"
+  hikka_only_doc: "Как обрабатывать модули с меткой <code># scope: hikka_only</code> (написаны под Hikka, не под Heroku):\n<b>block</b> — не загружать\n<b>warn</b> — загружать, но писать предупреждение в лог\n<b>allow</b> — загружать молча"
+  hikka_only_blocked: "<tg-emoji emoji-id=5287372146039861774>❌</tg-emoji> <b>Этот модуль написан только под Hikka и не поддерживается на Heroku</b>"
   developer: "\n\n<tg-emoji emoji-id=5287454910059654880>🫶</tg-emoji> <b>Разработчик:</b> {}"
   depends_from: "\n\n<tg-emoji emoji-id=5341492148468465410>📦</tg-emoji> <b>Зависимости:</b> \n{}"
   by: "от"
