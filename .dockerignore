@@ -181,3 +181,5 @@ heroku.log.*
 unknown_errors.txt
 
 *.sock
+
+!assets/**
