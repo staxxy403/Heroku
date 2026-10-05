@@ -1,4 +1,10 @@
 # Heroku Changelog
+## 🪐 Heroku 2.1.1
+
+ - add webpanel for first login
+ - fix bot creation via @BotFather
+ - add try/catch to all send_photo methods
+
 ## 🪐 Heroku 2.1.0
 
  - fix security check in help
