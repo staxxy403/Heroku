@@ -579,7 +579,7 @@ class LoaderMod(loader.Module):
             )
             return False
 
-        ensure_user_site_in_path()
+        loader.ensure_user_site_in_path()
 
         return True
 
