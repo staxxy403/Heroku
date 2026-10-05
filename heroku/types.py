@@ -476,9 +476,10 @@ class Module:
 
         from . import utils  # Avoiding circular import
         from .loader import (
-            USER_INSTALL,
+            PIP_TARGET,
+            UV,
             VALID_PIP_PACKAGES,
-            ensure_user_site_in_path,
+            ensure_pip_target_in_path,
         )
         from .translations import Strings
 
@@ -491,7 +492,7 @@ class Module:
         if not utils.check_url(url):
             _raise(ValueError("Invalid url for library"))
 
-        code = await utils.run_sync(requests.get, url)
+        code = await utils.run_sync(requests.get, url, timeout=30)
         code.raise_for_status()
         code = code.text
 
@@ -553,25 +554,24 @@ class Module:
                 _raise(e)
 
             utils.ensure_child_watcher()
-            pip = await asyncio.create_subprocess_exec(
-                sys.executable,
-                "-m",
+            proc = await asyncio.create_subprocess_exec(
+                UV,
                 "pip",
                 "install",
                 "--upgrade",
-                "-q",
-                "--disable-pip-version-check",
-                "--no-warn-script-location",
-                *["--user"] if USER_INSTALL else [],
+                "--python",
+                sys.executable,
+                "--target",
+                PIP_TARGET,
                 *requirements,
             )
 
-            rc = await pip.wait()
+            rc = await proc.wait()
 
             if rc != 0:
                 _raise(e)
 
-            ensure_user_site_in_path()
+            ensure_pip_target_in_path()
             importlib.invalidate_caches()
 
             kwargs = utils.get_kwargs()

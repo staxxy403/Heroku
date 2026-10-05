@@ -98,19 +98,22 @@ def get_file_hash(filename):
 
 
 def deps():
+    is_venv = hasattr(sys, "real_prefix") or sys.prefix != getattr(
+        sys, "base_prefix", sys.prefix
+    )
+    cmd = [
+        "uv",
+        "pip",
+        "install",
+        "--upgrade",
+        "--python",
+        sys.executable,
+        *([] if is_venv else ["--system"]),
+        "-r",
+        "requirements.txt",
+    ]
     subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--upgrade",
-            "-q",
-            "--disable-pip-version-check",
-            "--no-warn-script-location",
-            "-r",
-            "requirements.txt",
-        ],
+        cmd,
         check=True,
         timeout=600,
         capture_output=True,

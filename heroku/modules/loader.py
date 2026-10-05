@@ -364,6 +364,7 @@ class LoaderMod(loader.Module):
                 if self.config["basic_auth"]
                 else None
             ),
+            timeout=30,
         )
 
         if not str(res.status_code).startswith("2"):
@@ -539,47 +540,70 @@ class LoaderMod(loader.Module):
         )
 
     async def install_requirements(self, requirements: list):
-        is_venv = hasattr(sys, "real_prefix") or sys.prefix != getattr(
-            sys, "base_prefix", sys.prefix
-        )
-        need_user_flag = loader.USER_INSTALL and not is_venv
+        async def _run(reqs: list):
+            cmd = [
+                loader.UV,
+                "pip",
+                "install",
+                "--upgrade",
+                "--python",
+                sys.executable,
+                "--target",
+                loader.PIP_TARGET,
+                *reqs,
+            ]
 
-        cmd = [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--upgrade",
-            "-q",
-            "--disable-pip-version-check",
-            "--no-warn-script-location",
-            *(["--user"] if need_user_flag else []),
-            *requirements,
-        ]
+            utils.ensure_child_watcher()
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
 
-        utils.ensure_child_watcher()
-        try:
-            pip = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+                out, err = await proc.communicate()
+            except Exception:
+                logger.exception("uv requirements install failed to start: %s", cmd)
+                return None
 
-            out, err = await pip.communicate()
-        except Exception:
-            logger.exception("Pip requirements install failed to start: %s", cmd)
+            return proc.returncode, cmd, out, err
+
+        result = await _run(requirements)
+        if result is None:
             return False
 
-        if pip.returncode != 0:
+        returncode, cmd, out, err = result
+
+        if returncode != 0:
+            normalized = [
+                req.split(".")[0]
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+", req)
+                else req
+                for req in requirements
+            ]
+
+            if normalized != requirements:
+                logger.warning(
+                    "uv failed for %s, retrying with top-level packages: %s",
+                    requirements,
+                    normalized,
+                )
+                result = await _run(normalized)
+                if result is None:
+                    return False
+
+                returncode, cmd, out, err = result
+
+        if returncode != 0:
             logger.error(
-                "Pip requirements install failed (%s) with exit code %s: %s",
+                "uv requirements install failed (%s) with exit code %s: %s",
                 " ".join(cmd),
-                pip.returncode,
+                returncode,
                 (err or out).decode(errors="ignore").strip() or "<no output>",
             )
             return False
 
-        loader.ensure_user_site_in_path()
+        loader.ensure_pip_target_in_path()
 
         return True
 
@@ -873,7 +897,10 @@ class LoaderMod(loader.Module):
                     "Module loading failed, attemping dependency installation (%s)",
                     e.name,
                 )
-                requirements = [loader.IMPORT_PIP_ALIASES.get(e.name.lower(), e.name)]
+                missing = (e.name or "").split(".")[0].lower()
+                requirements = (
+                    [loader.IMPORT_PIP_ALIASES.get(missing, missing)] if missing else []
+                )
 
                 if not requirements:
                     raise Exception("Nothing to install") from e
@@ -1587,6 +1614,7 @@ class LoaderMod(loader.Module):
                     if self.config["basic_auth"]
                     else None
                 ),
+                timeout=30,
             )
             r.raise_for_status()
             if not r.text.strip():

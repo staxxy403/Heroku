@@ -162,6 +162,7 @@ class RemoteStorage:
                 requests.get,
                 url,
                 auth=(tuple(auth.split(":", 1)) if auth else None),
+                timeout=30,
             )
             r.raise_for_status()
         except Exception:

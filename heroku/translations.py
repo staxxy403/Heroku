@@ -144,7 +144,7 @@ class BaseTranslator:
         self, pack_url: str, cache_path: Path = None
     ) -> bool | dict:
         try:
-            content = (await utils.run_sync(requests.get, pack_url)).text
+            content = (await utils.run_sync(requests.get, pack_url, timeout=30)).text
             data = yaml.load(content)
         except Exception:
             logger.exception("Unable to decode %s", pack_url)
@@ -205,7 +205,11 @@ class Translator(BaseTranslator):
                 if utils.check_url(language):
                     try:
                         data = self._get_pack_raw(
-                            (await utils.run_sync(requests.get, language)).text,
+                            (
+                                await utils.run_sync(
+                                    requests.get, language, timeout=30
+                                )
+                            ).text,
                             language.split(".")[-1],
                         )
                     except Exception:

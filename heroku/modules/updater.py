@@ -547,19 +547,24 @@ class UpdaterMod(loader.Module):
     def req_common():
         # Now we have downloaded new code, install requirements
         logger.debug("Installing new requirements...")
+        is_venv = hasattr(sys, "real_prefix") or sys.prefix != getattr(
+            sys, "base_prefix", sys.prefix
+        )
         try:
             subprocess.run(
                 [
-                    sys.executable,
-                    "-m",
+                    loader.UV,
                     "pip",
                     "install",
+                    "--upgrade",
+                    "--python",
+                    sys.executable,
+                    *([] if is_venv else ["--system"]),
                     "-r",
                     os.path.join(
                         os.path.dirname(utils.get_base_dir()),
                         "requirements.txt",
                     ),
-                    "--user",
                 ],
                 check=True,
                 timeout=600,

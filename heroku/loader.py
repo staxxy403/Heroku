@@ -24,6 +24,7 @@ import inspect
 import logging
 import os
 import re
+import shutil
 import site
 import sys
 import typing
@@ -158,30 +159,6 @@ IMPORT_PIP_ALIASES = {
     "herokutl": "Heroku-TL-New",
     "markdown_it": "markdown-it-py",
 }
-
-USER_INSTALL = "PIP_TARGET" not in os.environ and "VIRTUAL_ENV" not in os.environ
-
-
-def ensure_user_site_in_path() -> None:
-    if not USER_INSTALL:
-        return
-
-    try:
-        user_site = site.getusersitepackages()
-    except Exception:
-        return
-
-    if not user_site:
-        return
-
-    with contextlib.suppress(OSError):
-        Path(user_site).mkdir(parents=True, exist_ok=True)
-
-    site.addsitedir(user_site)
-    importlib.invalidate_caches()
-
-
-ensure_user_site_in_path()
 
 native_import = builtins.__import__
 _IMPORT_DEPTH = contextvars.ContextVar("_IMPORT_DEPTH", default=0)
@@ -341,6 +318,27 @@ LOADED_MODULES_PATH = Path(LOADED_MODULES_DIR)
 MODULES_LANGPACKS_PATH = Path(MODULES_LANGPACKS_DIR)
 LOADED_MODULES_PATH.mkdir(parents=True, exist_ok=True)
 MODULES_LANGPACKS_PATH.mkdir(parents=True, exist_ok=True)
+
+UV = shutil.which("uv") or "uv"
+
+PIP_TARGET = (
+    os.path.join(BASE_DIR, "python")
+    if "DOCKER" in os.environ
+    else os.path.join(os.path.expanduser("~"), ".local", "share", "heroku", "python")
+)
+
+
+def ensure_pip_target_in_path() -> None:
+    with contextlib.suppress(OSError):
+        Path(PIP_TARGET).mkdir(parents=True, exist_ok=True)
+
+    if PIP_TARGET not in sys.path:
+        site.addsitedir(PIP_TARGET)
+
+    importlib.invalidate_caches()
+
+
+ensure_pip_target_in_path()
 
 
 def _iter_module_files(
