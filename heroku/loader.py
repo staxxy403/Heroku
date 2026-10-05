@@ -24,6 +24,7 @@ import inspect
 import logging
 import os
 import re
+import site
 import sys
 import typing
 from functools import wraps
@@ -159,6 +160,28 @@ IMPORT_PIP_ALIASES = {
 }
 
 USER_INSTALL = "PIP_TARGET" not in os.environ and "VIRTUAL_ENV" not in os.environ
+
+
+def ensure_user_site_in_path() -> None:
+    if not USER_INSTALL:
+        return
+
+    try:
+        user_site = site.getusersitepackages()
+    except Exception:
+        return
+
+    if not user_site:
+        return
+
+    with contextlib.suppress(OSError):
+        Path(user_site).mkdir(parents=True, exist_ok=True)
+
+    site.addsitedir(user_site)
+    importlib.invalidate_caches()
+
+
+ensure_user_site_in_path()
 
 native_import = builtins.__import__
 _IMPORT_DEPTH = contextvars.ContextVar("_IMPORT_DEPTH", default=0)

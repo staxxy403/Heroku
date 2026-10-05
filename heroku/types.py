@@ -475,7 +475,11 @@ class Module:
         """
 
         from . import utils  # Avoiding circular import
-        from .loader import USER_INSTALL, VALID_PIP_PACKAGES
+        from .loader import (
+            USER_INSTALL,
+            VALID_PIP_PACKAGES,
+            ensure_user_site_in_path,
+        )
         from .translations import Strings
 
         def _raise(e: Exception):
@@ -567,6 +571,7 @@ class Module:
             if rc != 0:
                 _raise(e)
 
+            ensure_user_site_in_path()
             importlib.invalidate_caches()
 
             kwargs = utils.get_kwargs()
